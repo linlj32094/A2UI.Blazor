@@ -1,0 +1,104 @@
+@using A2UI.Core.Processing
+@inject MessageProcessor MessageProcessor
+@implements IDisposable
+
+@if (Surface != null && Surface.IsReadyToRender && !string.IsNullOrEmpty(Surface.RootComponentId))
+{
+    <div class="a2ui-surface" style="@GetSurfaceStyle()">
+        <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@Surface.RootComponentId" />
+    </div>
+}
+else
+{
+    <div class="a2ui-surface-debug" style="padding: 20px; border: 2px dashed #ccc; background: #f9f9f9; border-radius: 8px;">
+        <p style="font-weight: bold; color: #764ba2; margin-bottom: 12px;">🔍 调试信息 (SurfaceId: @SurfaceId):</p>
+        <ul style="list-style: none; padding-left: 0;">
+            <li style="padding: 4px 0;">✓ Surface: @(Surface != null ? "已创建" : "❌ 未创建")</li>
+            <li style="padding: 4px 0;">✓ IsReadyToRender: @(Surface?.IsReadyToRender.ToString() ?? "N/A")</li>
+            <li style="padding: 4px 0;">✓ RootComponentId: @(Surface?.RootComponentId ?? "❌ 未设置")</li>
+            <li style="padding: 4px 0;">✓ 组件数量: @(Surface?.Components.Count.ToString() ?? "N/A")</li>
+        </ul>
+        @if (Surface != null && Surface.Components.Count > 0)
+        {
+            <details style="margin-top: 12px;">
+                <summary style="cursor: pointer; color: #667eea;">查看组件列表</summary>
+                <ul style="margin-top: 8px; font-size: 12px; font-family: monospace;">
+                    @foreach (var comp in Surface.Components)
+                    {
+                        <li>@comp.Key: @comp.Value.Type</li>
+                    }
+                </ul>
+            </details>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required string SurfaceId { get; set; }
+
+    private A2UI.Core.Types.Surface? Surface;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        
+        Console.WriteLine($"[A2UISurface] OnInitialized: SurfaceId={SurfaceId}");
+        
+        // Subscribe to surface updates
+        MessageProcessor.SurfaceUpdated += OnSurfaceUpdated;
+        
+        // Initial load
+        LoadSurface();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        Console.WriteLine($"[A2UISurface] OnParametersSet: SurfaceId={SurfaceId}");
+        LoadSurface();
+    }
+
+    private void LoadSurface()
+    {
+        Surface = MessageProcessor.GetSurface(SurfaceId);
+        Console.WriteLine($"[A2UISurface] LoadSurface: SurfaceId={SurfaceId}, Found={Surface != null}, IsReady={Surface?.IsReadyToRender}, Root={Surface?.RootComponentId}, Components={Surface?.Components.Count}");
+    }
+
+    private void OnSurfaceUpdated(object? sender, SurfaceUpdatedEventArgs e)
+    {
+        Console.WriteLine($"[A2UISurface] OnSurfaceUpdated: Event SurfaceId={e.SurfaceId}, My SurfaceId={SurfaceId}, Match={e.SurfaceId == SurfaceId}");
+        
+        // Only update if this is our surface
+        if (e.SurfaceId == SurfaceId)
+        {
+            LoadSurface();
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string GetSurfaceStyle()
+    {
+        if (Surface?.Styles == null)
+            return "";
+
+        var styles = new List<string>();
+        
+        // Apply global styles from beginRendering message
+        foreach (var style in Surface.Styles)
+        {
+            if (style.Value != null)
+            {
+                styles.Add($"--a2ui-surface-{style.Key}: {style.Value}");
+            }
+        }
+
+        return string.Join("; ", styles);
+    }
+
+    public void Dispose()
+    {
+        MessageProcessor.SurfaceUpdated -= OnSurfaceUpdated;
+    }
+}
+

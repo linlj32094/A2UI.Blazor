@@ -1,0 +1,88 @@
+@inherits A2UIComponentBase
+@using A2UI.Core.Processing
+@inject DataBindingResolver BindingResolver
+
+@{
+    Console.WriteLine($"[A2UIText] Rendering text: '{ResolvedText?.Substring(0, Math.Min(50, ResolvedText?.Length ?? 0))}', UsageHint={UsageHint}");
+}
+
+@if (!string.IsNullOrEmpty(ResolvedText))
+{
+    @if (UsageHint == "h1")
+    {
+        <h1 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h1>
+    }
+    else if (UsageHint == "h2")
+    {
+        <h2 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h2>
+    }
+    else if (UsageHint == "h3")
+    {
+        <h3 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h3>
+    }
+    else if (UsageHint == "h4")
+    {
+        <h4 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h4>
+    }
+    else if (UsageHint == "h5")
+    {
+        <h5 class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</h5>
+    }
+    else if (UsageHint == "caption")
+    {
+        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</p>
+    }
+    else
+    {
+        <p class="@GetCssClass()" style="@GetInlineStyle()">@((MarkupString)ResolvedText)</p>
+    }
+}
+else
+{
+    <div style="background: #fff3cd; padding: 5px;">⚠️ Text component has no content</div>
+}
+
+@code {
+    private string? ResolvedText;
+    private string? UsageHint;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        Console.WriteLine($"[A2UIText] OnParametersSet: ComponentId={Component.Id}");
+
+        // Get the text bound value
+        var textValue = GetDictionaryProperty("text");
+        Console.WriteLine($"[A2UIText] textValue is null: {textValue == null}");
+        
+        if (textValue != null)
+        {
+            ResolvedText = BindingResolver.ResolveString(textValue, SurfaceId, Component.DataContextPath);
+            Console.WriteLine($"[A2UIText] ResolvedText: {ResolvedText}");
+        }
+
+        // Get usage hint
+        UsageHint = GetStringProperty("usageHint");
+        Console.WriteLine($"[A2UIText] UsageHint: {UsageHint}");
+    }
+
+    protected override string GetCssClass()
+    {
+        var baseClass = Theme.Components.Text;
+        var usageClass = UsageHint?.ToLower() switch
+        {
+            "h1" => Theme.Components.TextH1,
+            "h2" => Theme.Components.TextH2,
+            "h3" => Theme.Components.TextH3,
+            "h4" => Theme.Components.TextH4,
+            "h5" => Theme.Components.TextH5,
+            "caption" => Theme.Components.TextCaption,
+            "body" => Theme.Components.TextBody,
+            _ => Theme.Components.TextBody
+        };
+
+        return $"{baseClass} {usageClass}".Trim();
+    }
+}
+

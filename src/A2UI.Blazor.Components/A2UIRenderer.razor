@@ -1,0 +1,90 @@
+@using A2UI.Core.Processing
+@using A2UI.Core.Types
+@inject MessageProcessor MessageProcessor
+
+@if (ComponentNode != null)
+{
+    Console.WriteLine($"[A2UIRenderer] Rendering component: {ComponentId}, Type: {ComponentNode.Type}");
+    <DynamicComponent Type="@GetComponentType()" Parameters="@GetParameters()" />
+}
+else
+{
+    <div style="padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">
+        <strong>⚠️ 组件未找到:</strong> ComponentId=@ComponentId, SurfaceId=@SurfaceId
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required string SurfaceId { get; set; }
+
+    [Parameter]
+    public required string ComponentId { get; set; }
+
+    private ComponentNode? ComponentNode;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        Console.WriteLine($"[A2UIRenderer] OnParametersSet: SurfaceId={SurfaceId}, ComponentId={ComponentId}");
+
+        var surface = MessageProcessor.GetSurface(SurfaceId);
+        if (surface != null && surface.Components.TryGetValue(ComponentId, out var node))
+        {
+            ComponentNode = node;
+            Console.WriteLine($"[A2UIRenderer] Found component: {ComponentId}, Type: {node.Type}");
+        }
+        else
+        {
+            Console.WriteLine($"[A2UIRenderer] Component NOT found: {ComponentId}");
+            if (surface != null)
+            {
+                Console.WriteLine($"[A2UIRenderer] Available components: {string.Join(", ", surface.Components.Keys)}");
+            }
+            else
+            {
+                Console.WriteLine($"[A2UIRenderer] Surface NOT found: {SurfaceId}");
+            }
+        }
+    }
+
+    private Type GetComponentType()
+    {
+        if (ComponentNode == null)
+            return typeof(A2UIText); // Fallback
+
+        return ComponentNode.Type switch
+        {
+            "Text" => typeof(A2UIText),
+            "Button" => typeof(A2UIButton),
+            "Image" => typeof(A2UIImage),
+            "Icon" => typeof(A2UIIcon),
+            "Card" => typeof(A2UICard),
+            "Row" => typeof(A2UIRow),
+            "Column" => typeof(A2UIColumn),
+            "List" => typeof(A2UIList),
+            "TextField" => typeof(A2UITextField),
+            "CheckBox" => typeof(A2UICheckBox),
+            "DateTimeInput" => typeof(A2UIDateTimeInput),
+            "Slider" => typeof(A2UISlider),
+            "MultipleChoice" => typeof(A2UIMultipleChoice),
+            "Divider" => typeof(A2UIDivider),
+            "Tabs" => typeof(A2UITabs),
+            "Modal" => typeof(A2UIModal),
+            "Video" => typeof(A2UIVideo),
+            "AudioPlayer" => typeof(A2UIAudioPlayer),
+            _ => typeof(A2UIText) // Fallback for unknown types
+        };
+    }
+
+    private Dictionary<string, object> GetParameters()
+    {
+        return new Dictionary<string, object>
+        {
+            { "SurfaceId", SurfaceId },
+            { "Component", ComponentNode! }
+        };
+    }
+}
+

@@ -1,0 +1,59 @@
+@inherits A2UIComponentBase
+@using A2UI.Core.Processing
+@inject DataBindingResolver BindingResolver
+
+<span class="@GetCssClass()" style="@GetInlineStyle()">
+    @GetIconCharacter(ResolvedIconName)
+</span>
+
+@code {
+    private string? ResolvedIconName;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the icon name bound value
+        var nameValue = GetDictionaryProperty("name");
+        if (nameValue != null)
+        {
+            ResolvedIconName = BindingResolver.ResolveString(nameValue, SurfaceId, Component.DataContextPath);
+        }
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Icon;
+    }
+
+    // Simple icon mapping - in a real implementation, this would use Material Icons or similar
+    private string GetIconCharacter(string? iconName)
+    {
+        return iconName?.ToLower() switch
+        {
+            "accountcircle" => "👤",
+            "add" => "➕",
+            "arrowback" => "⬅️",
+            "arrowforward" => "➡️",
+            "attachfile" => "📎",
+            "calendartoday" => "📅",
+            "call" => "📞",
+            "camera" => "📷",
+            "check" => "✓",
+            "close" => "✕",
+            "delete" => "🗑️",
+            "edit" => "✏️",
+            "email" => "✉️",
+            "favorite" => "❤️",
+            "home" => "🏠",
+            "info" => "ℹ️",
+            "menu" => "☰",
+            "search" => "🔍",
+            "settings" => "⚙️",
+            "star" => "⭐",
+            "warning" => "⚠️",
+            _ => "◉"
+        };
+    }
+}
+

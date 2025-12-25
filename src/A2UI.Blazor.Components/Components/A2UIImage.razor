@@ -1,0 +1,69 @@
+@inherits A2UIComponentBase
+@using A2UI.Core.Processing
+@inject DataBindingResolver BindingResolver
+
+@if (!string.IsNullOrEmpty(ResolvedUrl))
+{
+    <img src="@ResolvedUrl" 
+         class="@GetCssClass()" 
+         style="@GetInlineStyle()" 
+         alt="" />
+}
+
+@code {
+    private string? ResolvedUrl;
+    private string? Fit;
+    private string? UsageHint;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        // Get the url bound value
+        var urlValue = GetDictionaryProperty("url");
+        if (urlValue != null)
+        {
+            ResolvedUrl = BindingResolver.ResolveString(urlValue, SurfaceId, Component.DataContextPath);
+        }
+
+        Fit = GetStringProperty("fit");
+        UsageHint = GetStringProperty("usageHint");
+    }
+
+    protected override string GetCssClass()
+    {
+        var baseClass = Theme.Components.Image;
+        var usageClass = UsageHint?.ToLower() switch
+        {
+            "icon" => Theme.Components.ImageIcon,
+            "avatar" => Theme.Components.ImageAvatar,
+            "smallfeature" or "mediumfeature" or "largefeature" or "header" => Theme.Components.ImageFeature,
+            _ => ""
+        };
+
+        return $"{baseClass} {usageClass}".Trim();
+    }
+
+    protected override string GetInlineStyle()
+    {
+        var baseStyle = base.GetInlineStyle();
+        var fitStyle = Fit?.ToLower() switch
+        {
+            "contain" => "object-fit: contain",
+            "cover" => "object-fit: cover",
+            "fill" => "object-fit: fill",
+            "none" => "object-fit: none",
+            "scale-down" => "object-fit: scale-down",
+            _ => ""
+        };
+
+        var styles = new List<string>();
+        if (!string.IsNullOrEmpty(baseStyle))
+            styles.Add(baseStyle);
+        if (!string.IsNullOrEmpty(fitStyle))
+            styles.Add(fitStyle);
+
+        return styles.Count > 0 ? string.Join("; ", styles) : "";
+    }
+}
+

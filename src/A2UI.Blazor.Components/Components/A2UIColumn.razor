@@ -1,0 +1,104 @@
+@inherits A2UIComponentBase
+
+<div class="@GetCssClass()" style="@GetCombinedStyle()">
+    @{
+        Console.WriteLine($"[A2UIColumn] Rendering column, ChildrenIds count={ChildrenIds?.Count ?? 0}");
+    }
+    @if (ChildrenIds != null && ChildrenIds.Count > 0)
+    {
+        @foreach (var childId in ChildrenIds)
+        {
+            Console.WriteLine($"[A2UIColumn] Rendering child: {childId}");
+            <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@childId" />
+        }
+    }
+    else
+    {
+        <div style="padding: 10px; background: #e3f2fd;">⚠️ Column has no children</div>
+    }
+</div>
+
+@code {
+    private List<string>? ChildrenIds;
+    private string? Distribution;
+    private string? Alignment;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        Console.WriteLine($"[A2UIColumn] OnParametersSet: ComponentId={Component.Id}");
+
+        var childrenData = GetDictionaryProperty("children");
+        Console.WriteLine($"[A2UIColumn] childrenData is null: {childrenData == null}");
+        
+        if (childrenData != null && childrenData.TryGetValue("explicitList", out var explicitList))
+        {
+            Console.WriteLine($"[A2UIColumn] explicitList type: {explicitList?.GetType().Name}");
+            
+            if (explicitList is List<string> stringList)
+            {
+                ChildrenIds = stringList.ToList();
+            }
+            else if (explicitList is List<object> objectList)
+            {
+                ChildrenIds = objectList.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+            }
+            else if (explicitList is object[] objectArray)
+            {
+                ChildrenIds = objectArray.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+            }
+            else if (explicitList is string[] stringArray)
+            {
+                ChildrenIds = stringArray.ToList();
+            }
+            
+            Console.WriteLine($"[A2UIColumn] Parsed ChildrenIds: {string.Join(", ", ChildrenIds ?? new List<string>())}");
+        }
+
+        Distribution = GetStringProperty("distribution");
+        Alignment = GetStringProperty("alignment");
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Column;
+    }
+
+    private string GetCombinedStyle()
+    {
+        var styles = new List<string> { GetInlineStyle() };
+
+        if (!string.IsNullOrEmpty(Distribution))
+        {
+            var justifyContent = Distribution.ToLower() switch
+            {
+                "start" => "flex-start",
+                "end" => "flex-end",
+                "center" => "center",
+                "spacebetween" => "space-between",
+                "spacearound" => "space-around",
+                "spaceevenly" => "space-evenly",
+                _ => "flex-start"
+            };
+            styles.Add($"justify-content: {justifyContent}");
+        }
+
+        if (!string.IsNullOrEmpty(Alignment))
+        {
+            var alignItems = Alignment.ToLower() switch
+            {
+                "start" => "flex-start",
+                "end" => "flex-end",
+                "center" => "center",
+                "stretch" => "stretch",
+                "baseline" => "baseline",
+                _ => "stretch"
+            };
+            styles.Add($"align-items: {alignItems}");
+        }
+
+        return string.Join("; ", styles.Where(s => !string.IsNullOrEmpty(s)));
+    }
+}
+

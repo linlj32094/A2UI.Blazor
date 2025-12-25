@@ -1,0 +1,18 @@
+@using A2UI.Theming
+@inject ThemeService ThemeService
+
+<style>
+    @((MarkupString)ThemeService.GenerateThemeCss())
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // 确保使用默认主题
+        if (ThemeService.CurrentTheme.Name != "Default")
+        {
+            ThemeService.SetTheme("Default");
+        }
+    }
+}
+

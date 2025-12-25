@@ -1,0 +1,32 @@
+@inherits A2UIComponentBase
+
+<div class="@GetCssClass()" style="@GetInlineStyle()">
+    @{
+        Console.WriteLine($"[A2UICard] Rendering card, ChildComponentId={ChildComponentId}");
+    }
+    @if (!string.IsNullOrEmpty(ChildComponentId))
+    {
+        <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@ChildComponentId" />
+    }
+    else
+    {
+        <div style="padding: 10px; background: #ffebee;">⚠️ Card has no child component</div>
+    }
+</div>
+
+@code {
+    private string? ChildComponentId;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        ChildComponentId = GetStringProperty("child");
+        Console.WriteLine($"[A2UICard] OnParametersSet: ComponentId={Component.Id}, ChildComponentId={ChildComponentId}");
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Card;
+    }
+}
+

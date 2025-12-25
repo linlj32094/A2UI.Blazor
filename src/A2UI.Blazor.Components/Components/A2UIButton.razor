@@ -1,0 +1,63 @@
+@inherits A2UIComponentBase
+@using A2UI.Core.Processing
+@using A2UI.Core.Messages
+@inject DataBindingResolver BindingResolver
+@inject EventDispatcher EventDispatcher
+
+<button class="@GetCssClass()" style="@GetInlineStyle()" @onclick="HandleClick">
+    @if (!string.IsNullOrEmpty(ChildComponentId))
+    {
+        <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@ChildComponentId" />
+    }
+</button>
+
+@code {
+    private string? ChildComponentId;
+    private Dictionary<string, object>? ActionData;
+    private bool IsPrimary;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        ChildComponentId = GetStringProperty("child");
+        ActionData = GetDictionaryProperty("action");
+        IsPrimary = GetBoolProperty("primary", false);
+    }
+
+    private void HandleClick()
+    {
+        if (ActionData == null)
+            return;
+
+        // Extract action name
+        if (!ActionData.TryGetValue("name", out var nameObj) || nameObj is not string actionName)
+            return;
+
+        // Resolve context
+        Dictionary<string, object> context = new();
+        if (ActionData.TryGetValue("context", out var contextObj) && 
+            contextObj is List<Dictionary<string, object>> contextEntries)
+        {
+            context = BindingResolver.ResolveActionContext(contextEntries, SurfaceId, Component.DataContextPath);
+        }
+
+        // Create and dispatch user action
+        var userAction = EventDispatcher.CreateUserAction(
+            actionName,
+            SurfaceId,
+            Component.Id,
+            context
+        );
+
+        EventDispatcher.DispatchUserAction(userAction);
+    }
+
+    protected override string GetCssClass()
+    {
+        var baseClass = Theme.Components.Button;
+        var variantClass = IsPrimary ? Theme.Components.ButtonPrimary : Theme.Components.ButtonSecondary;
+        return $"{baseClass} {variantClass}".Trim();
+    }
+}
+

@@ -1,0 +1,80 @@
+@inherits A2UIComponentBase
+
+<div class="@GetCssClass()" style="@GetCombinedStyle()">
+    @if (ChildrenIds != null)
+    {
+        @foreach (var childId in ChildrenIds)
+        {
+            <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@childId" />
+        }
+    }
+</div>
+
+@code {
+    private List<string>? ChildrenIds;
+    private string? Distribution;
+    private string? Alignment;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        var childrenData = GetDictionaryProperty("children");
+        if (childrenData != null && childrenData.TryGetValue("explicitList", out var explicitList))
+        {
+            if (explicitList is List<string> stringList)
+            {
+                ChildrenIds = stringList.ToList();
+            }
+            else if (explicitList is List<object> objectList)
+            {
+                ChildrenIds = objectList.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+            }
+        }
+
+        Distribution = GetStringProperty("distribution");
+        Alignment = GetStringProperty("alignment");
+    }
+
+    protected override string GetCssClass()
+    {
+        return Theme.Components.Row;
+    }
+
+    private string GetCombinedStyle()
+    {
+        var styles = new List<string> { GetInlineStyle() };
+
+        if (!string.IsNullOrEmpty(Distribution))
+        {
+            var justifyContent = Distribution.ToLower() switch
+            {
+                "start" => "flex-start",
+                "end" => "flex-end",
+                "center" => "center",
+                "spacebetween" => "space-between",
+                "spacearound" => "space-around",
+                "spaceevenly" => "space-evenly",
+                _ => "flex-start"
+            };
+            styles.Add($"justify-content: {justifyContent}");
+        }
+
+        if (!string.IsNullOrEmpty(Alignment))
+        {
+            var alignItems = Alignment.ToLower() switch
+            {
+                "start" => "flex-start",
+                "end" => "flex-end",
+                "center" => "center",
+                "stretch" => "stretch",
+                "baseline" => "baseline",
+                _ => "stretch"
+            };
+            styles.Add($"align-items: {alignItems}");
+        }
+
+        return string.Join("; ", styles.Where(s => !string.IsNullOrEmpty(s)));
+    }
+}
+
