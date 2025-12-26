@@ -1,0 +1,24 @@
+@using A2UI.Core.Processing
+@using A2UI.Core.Types
+@inject MessageProcessor MessageProcessor
+
+@if (!string.IsNullOrEmpty(TemplateId))
+{
+    @* 渲染模板组件，但使用特定的数据上下文 *@
+    <A2UIListItemRenderer 
+        SurfaceId="@SurfaceId" 
+        TemplateId="@TemplateId" 
+        DataContextPath="@DataContextPath" />
+}
+
+@code {
+    [Parameter]
+    public required string SurfaceId { get; set; }
+
+    [Parameter]
+    public required string TemplateId { get; set; }
+
+    [Parameter]
+    public required string DataContextPath { get; set; }
+}
+

@@ -1,12 +1,30 @@
 @inherits A2UIComponentBase
+@using A2UI.Core.Processing
+@inject MessageProcessor MessageProcessor
 
 <div class="@GetCssClass()" style="@GetCombinedStyle()">
-    @if (ChildrenIds != null)
+    @if (UseTemplate && TemplateItems != null && TemplateItems.Count > 0)
     {
+        @* 使用模板模式渲染数据绑定的列表项 *@
+        @foreach (var item in TemplateItems)
+        {
+            <A2UIListItem 
+                SurfaceId="@SurfaceId" 
+                TemplateId="@TemplateComponentId" 
+                DataContextPath="@item.DataContextPath" />
+        }
+    }
+    else if (ChildrenIds != null && ChildrenIds.Count > 0)
+    {
+        @* 使用显式子组件列表 *@
         @foreach (var childId in ChildrenIds)
         {
             <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@childId" />
         }
+    }
+    else
+    {
+        <div style="padding: 10px; background: #e3f2fd;">⚠️ List 没有内容（需要 explicitList 或 template）</div>
     }
 </div>
 
@@ -14,46 +32,121 @@
     private List<string>? ChildrenIds;
     private string? Direction;
     private string? Alignment;
+    
+    // Template mode properties
+    private bool UseTemplate;
+    private string? TemplateComponentId;
+    private string? DataBindingPath;
+    private List<ListItemData>? TemplateItems;
 
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
 
         var childrenData = GetDictionaryProperty("children");
-        if (childrenData != null && childrenData.TryGetValue("explicitList", out var explicitList))
+        
+        if (childrenData != null)
         {
-            if (explicitList is List<string> stringList)
+            // 检查是否使用模板模式
+            if (childrenData.TryGetValue("template", out var templateObj) && 
+                templateObj is Dictionary<string, object> templateConfig)
             {
-                ChildrenIds = stringList.ToList();
+                UseTemplate = true;
+                ProcessTemplateMode(templateConfig);
             }
-            else if (explicitList is List<object> objectList)
+            // 否则使用显式列表模式
+            else if (childrenData.TryGetValue("explicitList", out var explicitList))
             {
-                ChildrenIds = objectList.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
-            }
-            else if (explicitList is string[] stringArray)
-            {
-                ChildrenIds = stringArray.ToList();
-            }
-            else if (explicitList is object[] objectArray)
-            {
-                ChildrenIds = objectArray.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
-            }
-            else if (explicitList is System.Text.Json.JsonElement jsonElement)
-            {
-                try
-                {
-                    ChildrenIds = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonElement.GetRawText()) ?? new List<string>();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[A2UIList] Failed to deserialize explicitList: {ex.Message}");
-                    ChildrenIds = new List<string>();
-                }
+                UseTemplate = false;
+                ProcessExplicitListMode(explicitList);
             }
         }
 
         Direction = GetStringProperty("direction");
         Alignment = GetStringProperty("alignment");
+
+        Console.WriteLine($"[A2UIList] OnParametersSet: ComponentId={Component.Id}, UseTemplate={UseTemplate}, ChildrenCount={ChildrenIds?.Count ?? 0}, TemplateItemsCount={TemplateItems?.Count ?? 0}");
+    }
+
+    private void ProcessTemplateMode(Dictionary<string, object> templateConfig)
+    {
+        // 获取模板组件ID
+        if (templateConfig.TryGetValue("componentId", out var componentIdObj) && 
+            componentIdObj is string componentId)
+        {
+            TemplateComponentId = componentId;
+        }
+
+        // 获取数据绑定路径
+        if (templateConfig.TryGetValue("dataBinding", out var dataBindingObj) && 
+            dataBindingObj is string dataBinding)
+        {
+            DataBindingPath = dataBinding;
+        }
+
+        Console.WriteLine($"[A2UIList] Template mode: ComponentId={TemplateComponentId}, DataBinding={DataBindingPath}");
+
+        // 从数据模型获取数据集合
+        if (!string.IsNullOrEmpty(DataBindingPath))
+        {
+            var data = MessageProcessor.GetData(SurfaceId, DataBindingPath, Component.DataContextPath);
+            
+            if (data is Dictionary<string, object> dataDict)
+            {
+                TemplateItems = new List<ListItemData>();
+                
+                // 遍历数据字典的每个键值对
+                foreach (var kvp in dataDict)
+                {
+                    var itemPath = $"{DataBindingPath.TrimEnd('/')}/{kvp.Key}";
+                    TemplateItems.Add(new ListItemData
+                    {
+                        Key = kvp.Key,
+                        DataContextPath = itemPath
+                    });
+                    
+                    Console.WriteLine($"[A2UIList] Template item: Key={kvp.Key}, Path={itemPath}");
+                }
+                
+                Console.WriteLine($"[A2UIList] Created {TemplateItems.Count} template items from data binding");
+            }
+            else
+            {
+                Console.WriteLine($"[A2UIList] Data binding failed: path={DataBindingPath}, data type={data?.GetType().Name ?? "null"}");
+            }
+        }
+    }
+
+    private void ProcessExplicitListMode(object explicitList)
+    {
+        if (explicitList is List<string> stringList)
+        {
+            ChildrenIds = stringList.ToList();
+        }
+        else if (explicitList is List<object> objectList)
+        {
+            ChildrenIds = objectList.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+        }
+        else if (explicitList is string[] stringArray)
+        {
+            ChildrenIds = stringArray.ToList();
+        }
+        else if (explicitList is object[] objectArray)
+        {
+            ChildrenIds = objectArray.Select(x => x?.ToString()).Where(x => !string.IsNullOrEmpty(x)).ToList()!;
+        }
+        else if (explicitList is System.Text.Json.JsonElement jsonElement)
+        {
+            try
+            {
+                ChildrenIds = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonElement.GetRawText()) ?? new List<string>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[A2UIList] Failed to deserialize explicitList: {ex.Message}");
+                ChildrenIds = new List<string>();
+            }
+        }
     }
 
     protected override string GetCssClass()
@@ -88,6 +181,12 @@
         }
 
         return string.Join("; ", styles.Where(s => !string.IsNullOrEmpty(s)));
+    }
+
+    private class ListItemData
+    {
+        public required string Key { get; set; }
+        public required string DataContextPath { get; set; }
     }
 }
 

@@ -1,0 +1,94 @@
+@using A2UI.Core.Processing
+@using A2UI.Core.Types
+@inject MessageProcessor MessageProcessor
+
+@if (TemplateComponent != null)
+{
+    <DynamicComponent Type="@GetComponentType()" Parameters="@GetParameters()" />
+}
+else
+{
+    <div style="padding: 5px; background: #ffebee; border-left: 3px solid #f44336;">
+        ⚠️ 模板组件未找到: @TemplateId
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required string SurfaceId { get; set; }
+
+    [Parameter]
+    public required string TemplateId { get; set; }
+
+    [Parameter]
+    public required string DataContextPath { get; set; }
+
+    private ComponentNode? TemplateComponent;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        var surface = MessageProcessor.GetSurface(SurfaceId);
+        if (surface != null && surface.Components.TryGetValue(TemplateId, out var node))
+        {
+            // 创建一个新的ComponentNode副本，设置DataContextPath
+            TemplateComponent = new ComponentNode
+            {
+                Id = node.Id,
+                Type = node.Type,
+                Properties = node.Properties,
+                Weight = node.Weight,
+                DataContextPath = DataContextPath  // 设置数据上下文路径
+            };
+
+            Console.WriteLine($"[A2UIListItemRenderer] Rendering template: {TemplateId}, DataContext: {DataContextPath}");
+        }
+        else
+        {
+            Console.WriteLine($"[A2UIListItemRenderer] Template component NOT found: {TemplateId}");
+        }
+    }
+
+    private Type GetComponentType()
+    {
+        if (TemplateComponent == null)
+            return typeof(A2UIText); // Fallback
+
+        return TemplateComponent.Type switch
+        {
+            "Text" => typeof(A2UIText),
+            "Button" => typeof(A2UIButton),
+            "Card" => typeof(A2UICard),
+            "Column" => typeof(A2UIColumn),
+            "Row" => typeof(A2UIRow),
+            "List" => typeof(A2UIList),
+            "Image" => typeof(A2UIImage),
+            "Icon" => typeof(A2UIIcon),
+            "TextField" => typeof(A2UITextField),
+            "CheckBox" => typeof(A2UICheckBox),
+            "Slider" => typeof(A2UISlider),
+            "DateTimeInput" => typeof(A2UIDateTimeInput),
+            "MultipleChoice" => typeof(A2UIMultipleChoice),
+            "Tabs" => typeof(A2UITabs),
+            "Modal" => typeof(A2UIModal),
+            "Divider" => typeof(A2UIDivider),
+            "AudioPlayer" => typeof(A2UIAudioPlayer),
+            "Video" => typeof(A2UIVideo),
+            _ => typeof(A2UIText) // Fallback for unknown types
+        };
+    }
+
+    private Dictionary<string, object> GetParameters()
+    {
+        if (TemplateComponent == null)
+            return new Dictionary<string, object>();
+
+        return new Dictionary<string, object>
+        {
+            ["SurfaceId"] = SurfaceId,
+            ["Component"] = TemplateComponent
+        };
+    }
+}
+
