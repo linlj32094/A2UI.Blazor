@@ -257,3 +257,4 @@ FodyWeavers.xsd
 *.sln.iml
 
 A2UI/*
+samples/A2UI.Sample.BlazorServer/Properties/PublishProfiles/FolderProfile.pubxml
