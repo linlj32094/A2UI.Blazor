@@ -7,9 +7,7 @@
 
 @if (IsOpen && !string.IsNullOrEmpty(ContentChildId))
 {
-   
-    Console.WriteLine($"[A2UIModal] Rendering opened modal - SurfaceId={SurfaceId}, ContentChildId={ContentChildId}, Title={ResolvedTitle}");
-    
+    <!-- Modal Dialog -->
     <div class="modal-overlay" @onclick="CloseModal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
         <div class="modal-content" @onclick:stopPropagation style="background: white; padding: 0; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow: hidden; position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
             <!-- Modal Header -->
@@ -24,7 +22,7 @@
             {
                 <button @onclick="CloseModal" style="position: absolute; top: 12px; right: 12px; border: none; background: transparent; font-size: 24px; cursor: pointer; line-height: 1; color: #666; z-index: 1;">&times;</button>
             }
-            
+
             <!-- Modal Body -->
             <div class="modal-body" style="padding: 24px; max-height: calc(80vh - 140px); overflow-y: auto;">
                 <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@ContentChildId" DataContextPath="@Component.DataContextPath" />
@@ -32,9 +30,20 @@
         </div>
     </div>
 }
+else
+{
+    <!-- Entry Point Child (触发器) -->
+    @if (!string.IsNullOrEmpty(EntryPointChildId))
+    {
+        <div @onclick="OpenModal" style="cursor: pointer;">
+            <A2UIRenderer SurfaceId="@SurfaceId" ComponentId="@EntryPointChildId" DataContextPath="@Component.DataContextPath" />
+        </div>
+    }
+}
 
 @code {
     private string? ContentChildId;
+    private string? EntryPointChildId;
     private string? ResolvedTitle;
     private string? IsOpenDataPath;
     private bool IsOpen = false;
@@ -42,7 +51,7 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        
+
         // Subscribe to data update events
         EventDispatcher.DataUpdateDispatched += OnDataUpdate;
     }
@@ -56,6 +65,10 @@
         // Get content child ID
         ContentChildId = GetStringProperty("content");
         Console.WriteLine($"[A2UIModal] ContentChildId: {ContentChildId}");
+
+        // Get entry point child ID (触发器子组件)
+        EntryPointChildId = GetStringProperty("entryPointChild");
+        Console.WriteLine($"[A2UIModal] EntryPointChildId: {EntryPointChildId}");
 
         // Get title
         var titleValue = GetDictionaryProperty("title");
@@ -90,7 +103,7 @@
             Console.WriteLine($"[A2UIModal] Ignoring update from other surface: {e.Update.SurfaceId}");
             return;
         }
-        
+
         // Check if this update affects our modal open state
         if (!string.IsNullOrEmpty(IsOpenDataPath) && e.Update.Path == IsOpenDataPath)
         {
@@ -103,6 +116,26 @@
         {
             Console.WriteLine($"[A2UIModal] Path did not match or IsOpenDataPath is empty");
         }
+    }
+
+    private void OpenModal()
+    {
+        Console.WriteLine($"[A2UIModal] Opening modal");
+        IsOpen = true;
+
+        // Update data binding
+        if (!string.IsNullOrEmpty(IsOpenDataPath))
+        {
+            var dataUpdate = EventDispatcher.CreateDataUpdate(
+                SurfaceId,
+                Component.Id,
+                IsOpenDataPath,
+                true
+            );
+            EventDispatcher.DispatchDataUpdate(dataUpdate);
+        }
+
+        StateHasChanged();
     }
 
     public void Dispose()
